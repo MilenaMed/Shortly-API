@@ -23,6 +23,10 @@ const loginSchema = joi.object({
     password: joi.string().required()
 });
 
+const urlsSchema = joi.object({
+    url: joi.string().uri().required(),
+});
+
 //POST - signup
 app.post('/signup', async (request, response) => {
     const { name, password, confirmPassword, email } = request.body;
@@ -82,10 +86,14 @@ app.post("/urls/shorten", async (request, response) => {
     const { url } = request.body
     const shortUrl = nanoid(8)
 
+    const validation = urlsSchema.validate(request.body)
+    if (validation.error) {
+        return response.status(422).send("Preencha os dados corretamente")
+    }
+
     if (!token) {
         return response.status(401).send("necessário um token para prosseguir")
     }
-
     const isLoged = await db.query(`SELECT * FROM sessions WHERE token = $1;`, [token])
     if (isLoged.rowCount === 0) {
         return response.status(401).send("Usuário não está logado")
