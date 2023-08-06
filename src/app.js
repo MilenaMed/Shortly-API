@@ -140,11 +140,39 @@ app.get("/urls/open/:shortUrl", async (request, response) => {
 
         await db.query(`UPDATE urls SET "visitCount" = "visitCount" + 1 WHERE "shortUrl"=$1;`, [shortUrl])
 
-return response.redirect(chosenShortUrl.rows[0].urls)
+        return response.redirect(chosenShortUrl.rows[0].urls)
 
     } catch (err) {
-    response.status(500).send(err)
-}
+        response.status(500).send(err)
+    }
+});
+//DELETE -/urls/:id
+app.delete("/urls/:id", async (request, response) => {
+    const { id } = request.params
+    const { authorization } = request.headers
+    const token = authorization?.replace('Bearer ', '')
+    if (!token) {
+        return response.status(401).send("necessário um token para prosseguir")
+    }
+    const isLoged = await db.query(`SELECT * FROM sessions WHERE token = $1;`, [token])
+    if (isLoged.rowCount === 0) {
+        return response.status(401).send("Usuário não está logado")
+    }
+
+    try {
+        const url = await db.query(`SELECT * FROM urls WHERE id=$1;`, [id]);
+        if (url.rowCount === 0) {
+            return response.status(404).send("Url não encontrada")
+        }
+        if (url.rows[0].userId !== isLoged.rows[0].userId) {
+            return response.status(401).send("Você não pode deletar esse dado")
+        }
+        await db.query(`DELETE FROM urls WHERE id=$1;`, [id])
+        return response.status(204).send("Url deletada com sucesso")
+        
+    } catch (err) {
+        response.status(500).send(err)
+    }
 });
 
 //Porta
