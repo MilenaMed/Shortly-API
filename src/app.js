@@ -3,6 +3,7 @@ import joi from "joi";
 import { db } from "./database/database.conection.js";
 import bcrypt from "bcrypt"
 import { v4 as uuid } from "uuid";
+import { nanoid } from "nanoid";
 
 const app = express();
 
@@ -65,14 +66,44 @@ app.post("/signin", async (request, response) => {
     if (!correctPassword) {
         return response.status(401).send("senha incorreta")
     }
-    
+
     try {
         await db.query(`INSERT INTO sessions ("userId", token) VALUES ($1, $2);`, [existingUser.rows[0].id, token])
-        response.status(200).send(token)
+        response.status(200).send({ token: token })
     } catch (err) {
         response.status(500).send(err)
     }
 });
+
+//POST - urls/shorten
+app.post("/urls/shorten", async (request, response) => {
+    const { authorization } = request.headers
+    const token = authorization?.replace('Bearer ', '')
+    const { url } = request.body
+    const shortUrl = nanoid(8)
+
+    if (!token) {
+        return response.status(401).send("necessário um token para prosseguir")
+    }
+
+    const isLoged = await db.query(`SELECT * FROM sessions WHERE token = $1;`, [token])
+    if (isLoged.rowCount === 0) {
+        return response.status(401).send("Usuário não está logado")
+    }
+
+    try {
+        await db.query(`INSERT INTO urls (urls, "shortUrl", "userId")
+       VALUES ($1, $2, $3);`, [url, shortUrl, isLoged.rows[0].userId])
+
+        const { rows } = await db.query(`SELECT * FROM urls WHERE "userId"= $1 AND "shortUrl" = $2;`, [isLoged.rows[0].id, shortUrl])
+        response.status(200).send({ id: rows[0].id, shortUrl: rows[0].shortUrl })
+    } catch (err) {
+        response.status(500).send(err)
+    }
+});
+
+
+
 
 //Porta
 const PORT = process.env.PORT || 5000
