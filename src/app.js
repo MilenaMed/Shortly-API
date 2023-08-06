@@ -110,8 +110,23 @@ app.post("/urls/shorten", async (request, response) => {
     }
 });
 
+//GET - /urls/:id
 
+app.get("/urls/:id", async (request, response) => {
+    const { id } = request.params
 
+    try {
+        const url = await db.query(`SELECT * FROM urls WHERE id=$1;`, [id]);
+       if (url.rowCount === 0) {
+           return response.status(404).send("Url não encontrada")
+        }
+
+        return response.status(200).send({id: url.rows[0].id, url: url.rows[0].urls, shortUrl: url.rows[0].shortUrl});
+
+    } catch (err) {
+        response.status(500).send(err)
+    }
+});
 
 //Porta
 const PORT = process.env.PORT || 5000
