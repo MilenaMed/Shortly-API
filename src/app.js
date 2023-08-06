@@ -53,18 +53,21 @@ app.post("/signin", async (request, response) => {
     const token = uuid()
     const { email, password } = request.body
     const existingUser = await db.query(`SELECT * FROM users WHERE email=$1;`, [email])
-    const correctPassword = bcrypt.compareSync(password, existingUser.password)
-
     const validation = loginSchema.validate(request.body)
     if (validation.error) {
         return response.status(422).send("Preencha os dados corretamente")
     }
+    if (existingUser.rowCount === 0) {
+        return response.status(401).send("usuário não cadastrado")
+    }
 
+    const correctPassword = bcrypt.compareSync(password, existingUser.rows[0].password)
+    if (!correctPassword) {
+        return response.status(401).send("senha incorreta")
+    }
+    
     try {
-        if (existingUser.rowCount !== 0 || !correctPassword) {
-            return response.status(401).send("usuário não cadastrado ou senha incorreta");
-        }
-        await db.query(`INSERT INTO sessions ("userId", token) VALUES ($1, $2);`, [userId, token])
+        await db.query(`INSERT INTO sessions ("userId", token) VALUES ($1, $2);`, [existingUser.rows[0].id, token])
         response.status(200).send(token)
     } catch (err) {
         response.status(500).send(err)
