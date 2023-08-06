@@ -117,15 +117,34 @@ app.get("/urls/:id", async (request, response) => {
 
     try {
         const url = await db.query(`SELECT * FROM urls WHERE id=$1;`, [id]);
-       if (url.rowCount === 0) {
-           return response.status(404).send("Url não encontrada")
+        if (url.rowCount === 0) {
+            return response.status(404).send("Url não encontrada")
         }
 
-        return response.status(200).send({id: url.rows[0].id, url: url.rows[0].urls, shortUrl: url.rows[0].shortUrl});
+        return response.status(200).send({ id: url.rows[0].id, url: url.rows[0].urls, shortUrl: url.rows[0].shortUrl });
 
     } catch (err) {
         response.status(500).send(err)
     }
+});
+
+//GET - /urls/open/:shortUrl
+app.get("/urls/open/:shortUrl", async (request, response) => {
+    const { shortUrl } = request.params
+
+    try {
+        const chosenShortUrl = await db.query(`SELECT * FROM urls WHERE "shortUrl"=$1;`, [shortUrl]);
+        if (chosenShortUrl.rowCount === 0) {
+            return response.status(404).send("Url não encontrada")
+        }
+
+        await db.query(`UPDATE urls SET "visitCount" = "visitCount" + 1 WHERE "shortUrl"=$1;`, [shortUrl])
+
+return response.redirect(chosenShortUrl.rows[0].urls)
+
+    } catch (err) {
+    response.status(500).send(err)
+}
 });
 
 //Porta
