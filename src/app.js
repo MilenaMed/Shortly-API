@@ -187,7 +187,7 @@ app.get("/users/me", async (request, response) => {
         return response.status(401).send("Usuário não está logado")
     }
     try {
-        const { rows: [user] }= await db.query(`
+        const { rows: [user] } = await db.query(`
                 SELECT users.id, users.name, SUM(urls."visitCount") AS "visitCount"
                 FROM users
                 JOIN urls ON users.id = urls."userId"
@@ -202,6 +202,24 @@ app.get("/users/me", async (request, response) => {
         //console.log({user, shortenedUrls: [...urls] })
 
         return response.status(200).send({ ...user, shortenedUrls: [...shortenedUrls] })
+
+    } catch (err) {
+        response.status(500).send(err)
+    }
+});
+
+//GET - /ranking
+app.get("/ranking", async (request, response) => {
+    try {
+        const racking = await db.query(`
+        SELECT users.id, users.name, COUNT(urls.id) AS "linksCount", SUM(urls."visitCount") AS "visitCount"
+        FROM users 
+        LEFT JOIN urls ON users.id = urls."userId"
+        GROUP BY users.id, users.name
+        ORDER BY "visitCount" DESC NULLS LAST
+        LIMIT 10;`);
+
+        return response.status(200).send(racking.rows)
 
     } catch (err) {
         response.status(500).send(err)
