@@ -4,6 +4,7 @@ import { db } from "./database/database.conection.js";
 import bcrypt from "bcrypt"
 import { v4 as uuid } from "uuid";
 import { nanoid } from "nanoid";
+import urlsSchema from "./schemas/UrlSchemas.js";
 
 const app = express();
 
@@ -21,10 +22,6 @@ const signUpSchema = joi.object({
 const loginSchema = joi.object({
     email: joi.string().email().required(),
     password: joi.string().required()
-});
-
-const urlsSchema = joi.object({
-    url: joi.string().uri().required(),
 });
 
 //POST - signup
@@ -104,7 +101,7 @@ app.post("/urls/shorten", async (request, response) => {
        VALUES ($1, $2, $3);`, [url, shortUrl, isLoged.rows[0].userId])
 
         const { rows } = await db.query(`SELECT * FROM urls WHERE "userId"= $1 AND "shortUrl" = $2;`, [isLoged.rows[0].id, shortUrl])
-        response.status(200).send({ id: rows[0].id, shortUrl: rows[0].shortUrl })
+        response.status(201).send({ id: rows[0].id, shortUrl: rows[0].shortUrl })
     } catch (err) {
         response.status(500).send(err)
     }
