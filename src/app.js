@@ -7,7 +7,7 @@ const app = express();
 //Ferramentas
 app.use(express.json())
 app.use(router)
-dotev.config()
+dotenv.config()
 
 
 //Porta
