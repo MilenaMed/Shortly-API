@@ -169,7 +169,40 @@ app.delete("/urls/:id", async (request, response) => {
         }
         await db.query(`DELETE FROM urls WHERE id=$1;`, [id])
         return response.status(204).send("Url deletada com sucesso")
-        
+
+    } catch (err) {
+        response.status(500).send(err)
+    }
+});
+
+//GET - /users/me
+app.get("/users/me", async (request, response) => {
+    const { authorization } = request.headers
+    const token = authorization?.replace('Bearer ', '')
+    if (!token) {
+        return response.status(401).send("necessário um token para prosseguir")
+    }
+    const isLoged = await db.query(`SELECT * FROM sessions WHERE token = $1;`, [token])
+    if (isLoged.rowCount === 0) {
+        return response.status(401).send("Usuário não está logado")
+    }
+    try {
+        const { rows: [user] }= await db.query(`
+                SELECT users.id, users.name, SUM(urls."visitCount") AS "visitCount"
+                FROM users
+                JOIN urls ON users.id = urls."userId"
+                WHERE users.id=$1
+                GROUP BY users.id, users.name;
+            `, [isLoged.rows[0].userId]);
+
+
+        const { rows: shortenedUrls } = await db.query(`SELECT id, urls, "shortUrl", "visitCount" FROM urls WHERE "userId"=$1;`,
+            [isLoged.rows[0].userId])
+
+        //console.log({user, shortenedUrls: [...urls] })
+
+        return response.status(200).send({ ...user, shortenedUrls: [...shortenedUrls] })
+
     } catch (err) {
         response.status(500).send(err)
     }
